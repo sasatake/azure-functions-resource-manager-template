@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.1",
+  "parameters": {
+    "resourceGroupName": {
+      "type": "string"
+    },
+    "resourceGroupLocation": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "apiVersion": "2018-05-01",
+    "storageAccount": {
+      "ApiVersion": "2018-07-01",
+      "name": "[toLower(replace(parameters('resourceGroupName'), '-', ''))]",
+      "kind": "StorageV2",
+      "sku": "Standard_LRS"
+    },
+    "blobContainerName": "linkedtemplates"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "[variables('apiVersion')]",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('resourceGroupLocation')]",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('apiVersion')]",
+      "name": "[concat(variables('storageAccount').name,'-deployment')]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "[variables('storageAccount').ApiVersion]",
+              "name": "[variables('storageAccount').name]",
+              "location": "[parameters('resourceGroupLocation')]",
+              "kind": "[variables('storageAccount').kind]",
+              "sku": {
+                "name": "[variables('storageAccount').sku]"
+              },
+              "resources": [
+                {
+                  "type": "blobServices/containers",
+                  "name": "[concat('default/', variables('blobContainerName'))]",
+                  "apiVersion": "[variables('storageAccount').ApiVersion]",
+                  "properties": {
+                    "publicAccess": "None"
+                  },
+                  "dependsOn": ["[variables('storageAccount').name]"]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
