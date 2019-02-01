@@ -2,7 +2,7 @@
 
 ## Target Resource
 
-#### Initialize{#init}
+#### Initialize
 
 - Resource Group
 - Storage Account
@@ -27,4 +27,4 @@ $ sh deploy.sh clear
 ```
 
 [azure cli]: https://docs.microsoft.com/ja-jp/cli/azure/?view=azure-cli-latest
-[initialize]: #init
+[initialize]: #Initialize
