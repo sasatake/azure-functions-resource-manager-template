@@ -2,38 +2,42 @@
   "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
   "contentVersion": "1.0.0.1",
   "parameters": {
-    "resourceGroupName": {
+    "serviceId": {
       "type": "string"
     },
-    "resourceGroupLocation": {
+    "location": {
       "type": "string"
     }
   },
   "variables": {
     "apiVersion": "2018-05-01",
+    "resourceGroup": {
+      "name": "[concat(parameters('serviceId'),'-rg')]"
+    },
     "storageAccount": {
       "ApiVersion": "2018-07-01",
-      "name": "[toLower(replace(parameters('resourceGroupName'), '-', ''))]",
+      "name": "[concat(toLower(replace(parameters('serviceId'), '-', '')),'strg')]",
       "kind": "StorageV2",
       "sku": "Standard_LRS"
     },
-    "blobContainerName": "linkedtemplates"
+    "blobContainer": {
+      "name": "linkedtemplates"
+    }
   },
   "resources": [
     {
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "[variables('apiVersion')]",
-      "name": "[parameters('resourceGroupName')]",
-      "location": "[parameters('resourceGroupLocation')]",
-      "properties": {}
+      "name": "[variables('resourceGroup').name]",
+      "location": "[parameters('location')]"
     },
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('apiVersion')]",
       "name": "[concat(variables('storageAccount').name,'-deployment')]",
-      "resourceGroup": "[parameters('resourceGroupName')]",
+      "resourceGroup": "[variables('resourceGroup').name]",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupName'))]"
+        "[resourceId('Microsoft.Resources/resourceGroups/', variables('resourceGroup').name)]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -45,7 +49,7 @@
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "[variables('storageAccount').ApiVersion]",
               "name": "[variables('storageAccount').name]",
-              "location": "[parameters('resourceGroupLocation')]",
+              "location": "[parameters('location')]",
               "kind": "[variables('storageAccount').kind]",
               "sku": {
                 "name": "[variables('storageAccount').sku]"
@@ -53,8 +57,8 @@
               "resources": [
                 {
                   "type": "blobServices/containers",
-                  "name": "[concat('default/', variables('blobContainerName'))]",
                   "apiVersion": "[variables('storageAccount').ApiVersion]",
+                  "name": "[concat('default/', variables('blobContainer').name)]",
                   "properties": {
                     "publicAccess": "None"
                   },
@@ -66,5 +70,19 @@
         }
       }
     }
-  ]
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[variables('resourceGroup').name]"
+    },
+    "storageName": {
+      "type": "string",
+      "value": "[variables('storageAccount').name]"
+    },
+    "containerName": {
+      "type": "string",
+      "value": "[variables('blobContainer').name]"
+    }
+  }
 }

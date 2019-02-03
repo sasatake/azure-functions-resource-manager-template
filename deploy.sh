@@ -5,18 +5,39 @@ set -eu
 ##############################################################
 
 location="japaneast"
-resourceGroupName="user-manager-service"
-deploymentName=$resourceGroupName"-deployment"
+serviceId="user-manager"
+deploymentName=$serviceId"-deployment"
 
 ##############################################################
+
+function getResourceGroupName(){
+  az deployment show \
+    --name user-manager-deployment \
+    --output tsv \
+    --query properties.outputs.resourceGroupName.value
+}
+
+function getStorageName(){
+  az deployment show \
+    --name user-manager-deployment \
+    --output tsv \
+    --query properties.outputs.storageName.value
+}
+
+function getContainerName(){
+  az deployment show \
+    --name user-manager-deployment \
+    --output tsv \
+    --query properties.outputs.containerName.value
+}
 
 function validate(){
   az deployment validate \
     -l $location \
     --template-file templates/init.json \
     --parameters \
-      resourceGroupName=$resourceGroupName \
-      resourceGroupLocation=$location
+      serviceId=$serviceId \
+      location=$location
 }
 
 function init(){
@@ -25,11 +46,24 @@ function init(){
     -l $location \
     --template-file templates/init.json \
     --parameters \
-      resourceGroupName=$resourceGroupName \
-      resourceGroupLocation=$location
+      serviceId=$serviceId \
+      location=$location
+}
+
+function uploadLinkedTemplate(){
+  storageName=`getStorageName`
+  containerName=`getContainerName`
+
+  az storage blob upload-batch \
+    --account-name $storageName \
+    --destination $containerName \
+    --source templates/linked/ \
+    --pattern *.json
 }
 
 function clear(){
+  resourceGroupName=`getResourceGroupName`
+
   az deployment delete -n $deploymentName
   az group delete -n $resourceGroupName
 }
@@ -37,6 +71,7 @@ function clear(){
 case "${1:-''}" in
   "clear") clear ;;
   "validate") validate ;;
-  * ) init ;;
+  "upload") uploadLinkedTemplate ;;
+  * ) validate && init && uploadLinkedTemplate ;;
 esac
 
